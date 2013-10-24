@@ -1,24 +1,7 @@
-.set SIZE, 20
-.set SIZE2, 400
-.set REALSIZE, 18
-.set BOARD, 80400
-.set BOARDEND, 80800
-.set WALLCHAR, 35
-.set WALL, 6
-.set HEIGHT, 30
-
-.set PTRCENTER, -812
-.set PTRBOARD, -1600
-.set PTRLENGTH, -4000
-.set PTRDIR, -4004
-.set PTRX, -4008
-.set PTRY, -4012
-.set PTRCOORD, -4016
-.set PTRDIRCOORD, -4020
-.set PTRPREHEADLEN, -4024
-
 #% shows that you are refering to a register.
 #$ shows that you are refering to a constant number.
+#-1073741823 = apple value, which allows the palyer to play for ~10.2 years
+#(2^31-1)/2 is the formula since gamegrid should containt both "air" and apples.
 
 .globl start_game
 start_game:
@@ -38,7 +21,7 @@ start_game:
 	addl	%edx, %eax		#---
 	movl	$0, (%eax)		#set all values in gamegrid to 0
 	addl	$1, -16(%ebp)		#x var++
-	cmpl 	$400, -16(%ebp)		#For as long as pointer is less than SIZE2
+	cmpl 	$400, -16(%ebp)		#For as long as pointer is less than 400
 	jl	.INIT_GAMEGRID		
 	movl	$0, -16(%ebp)		#set x var to 0 for next loop
 	
@@ -53,8 +36,6 @@ start_game:
 	movl	8(%ebp), %eax			#add nibble length to aex
 	movl	%eax, -812(%ebp)		#place nibble in center
 	movl	$-1, -20(%ebp)			#set default direction to move
-
-
 
 	movl	$0, -12(%ebp)	
 .DRAW_BORDERS_LOOP:
@@ -145,7 +126,7 @@ start_game:
 	jg	.NO_HEAD
 
 	call 	_GET_GRID_ELEMENT
-	cmpl	$-999999, -1624(%ebp,%eax,4)	#check if it was an apple to pick up
+	cmpl	$-1073741823, -1624(%ebp,%eax,4)	#check if it was an apple to pick up
 	jge	.NO_APPLE
 	addl	$1, 8(%ebp)			#increase nibble size
 	call	_PLACE_APPLE			#calling function to place apple
@@ -178,7 +159,7 @@ start_game:
 
 	call _GET_GRID_ELEMENT
 	movl	-1624(%ebp,%eax,4), %eax	#get grid element value
-	cmpl	$-999999, %eax			#check if apple
+	cmpl	$-1073741823, %eax			#check if apple
 	jge	.IS_NOT_APPLE
 	movl	$36, 8(%esp)			#set char to "$"
 	movl	-12(%ebp), %eax
@@ -199,8 +180,6 @@ start_game:
 	cmpl	$18, -12(%ebp)			#should continue y loop
 	jle	.Y_LOOP
 
-
-
 	
 	movl	$21, -12(%ebp)			#y start value
 	movl	$0, %ecx			#set default quit value to quit if not changed
@@ -216,63 +195,33 @@ start_game:
 	jl 	.CHECK_QUIT_LOOP
 
 	cmpl	$0, %ecx			#quit if qiut value was not changed
-	je .QUIT
+	je 	.QUIT
 	
 
 
 	jmp	.MAIN_UPDATE_LOOP		#continue main update loop
 
 
-
-
-
 _PLACE_APPLE:
-	call	rand				#get random value for y			
-	movl	%eax, %ecx
+	call rand
+	movl $0, %edx                           #requires to be zero for div
+	movl $18, %ebx                         
+	div %ebx                                #modulo rand by 18 to %edx
+	addl $1, %edx                           #skip a column
+	movl %edx, %esi                         #store
 
-	#######Generated modulo function from C (value%(18)+1)########
-	movl	$954437177, %edx
-	movl	%ecx, %eax
-	imull	%edx
-	sarl	$2, %edx
-	movl	%ecx, %eax
-	sarl	$31, %eax
-	subl	%eax, %edx
-	movl	%edx, %eax
-	sall	$3, %eax
-	addl	%edx, %eax
-	addl	%eax, %eax
-	movl	%ecx, %edx
-	subl	%eax, %edx
+	call rand
+	movl $0, %edx
+	movl $18, %ebx
+	div %ebx
+	addl $1, %edx                           #skip a row
 
-	movl	%edx, %ebx
-	addl	$1, %ebx			#add one to skip first row
-
-	call	rand				#get random value for x
-	movl	%eax, %ecx			
-
-	#######Generated modulo function from C (value%(18)+1)########
-	movl	$954437177, %edx
-	movl	%ecx, %eax
-	imull	%edx
-	sarl	$2, %edx
-	movl	%ecx, %eax
-	sarl	$31, %eax
-	subl	%eax, %edx
-	movl	%edx, %eax
-	sall	$3, %eax
-	addl	%edx, %eax
-	addl	%eax, %eax
-	movl	%ecx, %edx
-	subl	%eax, %edx
-
-	addl	$1, %edx			#add one to skip first colum
-
-	movl	%ebx, %eax
-	imull	$20, %eax			#times by 20 to merge x, y values
-	addl	%edx, %eax			#combine values
-	movl	$-999999, -1624(%ebp,%eax,4)	#place apples at x, y
+	movl    %edx, %eax
+	imull   $20, %eax                       #times by 20 to merge x, y values
+	addl    %esi, %eax                      #combine values
+	movl    $-1073741823, -1624(%ebp,%eax,4)    #place apples at x, y
 	ret
+
 
 _GET_GRID_ELEMENT:
 	movl	-12(%ebp), %edx			#gets y value
@@ -285,91 +234,3 @@ _GET_GRID_ELEMENT:
 .QUIT:
 	call	nib_end
 
-
-
-
-
-
-/*
-	movl $PTRBOARD, %eax
-
-	//init board with all 0
-	init_board:
-	movl $0, 0(%ebp, %eax, 4)
-	addl $4, (%eax)
-	cmpl $0, %eax
-		jl init_board
-
-	#len, dir
-	movl $1, PTRLENGTH(%ebp)
-	movl $-4, PTRDIR(%ebp)
-
-
-	#placing the nibble in center
-	movl PTRLENGTH(%ebp), %eax
-	movl %eax, PTRCENTER(%ebp)
-
-
-	update:
-	movl $1, PTRY(%ebp)
-	drawy:
-	movl $1, PTRX(%ebp)
-	drawx:
-	#calc board pointer to bx
-	movl PTRY(%ebp), %eax
-	mull SIZE
-	addl PTRX(%ebp), %eax
-	mull -4
-	movl %eax, PTRCOORD(%ebp)
-
-	#decrease values
-	subl $1, PTRCOORD(%ebp)
-	#calc board dir pointer to cx
-	addl PTRDIR(%ebp), %eax
-	movl %eax, PTRDIRCOORD(%ebp)
-	#calc pre head len
-	movl PTRLENGTH(%ebp), %eax
-	cmpl $0, %eax
-		jg not_less
-	subl $1, %eax
-	movl %eax, PTRPREHEADLEN(%eax)
-	not_less:
-
-	//find head and collision detection
-	movl PTRDIRCOORD(%ebp), %edx
-	movl 0(%ebp, %edx, 4), %ecx
-	cmpl %eax, %ecx
-		jne no_head
-	movl PTRCOORD(%ebp), %edx
-	movl 0(%ebp, %edx, 4), %ecx
-	cmpl $0, %ecx
-		jge no_head
-	movl PTRLENGTH(%ebp), %eax
-	movl %eax, 0(%ebp, %edx, 4)
-	no_head:
-
-	//draw
-
-	//nibble_put_src '-'
-	movl PTRCOORD(%ebp), %edx
-	movl 0(%ebp, %edx, 4), %ecx
-	cmpl $1, %ecx
-		jl no_snake
-	//nibble_put_src '#'
-	no_snake:
-
-
-
-
-	incl PTRX(%ebp)
-	cmpl $REALSIZE, PTRX(%ebp)
-		jl drawy
-
-	incl PTRY(%ebp)
-	cmpl $REALSIZE, PTRY(%ebp)
-		jl drawy
-
-
-
-	jmp update
-*/
